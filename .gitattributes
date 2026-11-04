@@ -1,13 +1,33 @@
+# Line endings
 # Golden tests compare output byte for byte, so test scripts and
 # expected outputs must keep LF line endings on every checkout.
-tests/*.sh   text eol=lf
-tests/*.out  text eol=lf
-bench/*.sh   text eol=lf
-
 # libedit/netbsd/ is checked against upstream checksums (make verify)
 # and libedit/patches/zash.patch must apply to it exactly, so neither
-# may be rewritten on checkout.
-libedit/netbsd/**   text eol=lf
-libedit/patches/*   text eol=lf
-libedit/netbsd.sha256 text eol=lf
-libedit/port/probe/probe.sh text eol=lf
+# may be rewritten either.  The rest is LF too: make and the shell
+# scripts care, and nothing here is meant for Windows.
+*                   text eol=lf
+
+# z/OS working-tree encoding (zopen / IBM Open Enterprise git)
+# The repository holds plain ASCII.  On z/OS, git converts it to
+# IBM-1047 on checkout and tags each file IBM-1047, the same result as
+# "pax -ofrom=ISO8859-1,to=IBM-1047 -o setfiletag" on a dist tarball,
+# so xlc, ibm-clang, make and /bin/sh all read the sources natively.
+# LF becomes NL (0x15), which is z/OS's line terminator.  Off z/OS the
+# zos- attribute does nothing.  Patterns are listed explicitly rather
+# than as "*" because git converts every file a pattern matches on
+# every status and checkout.
+*.c                 zos-working-tree-encoding=ibm-1047
+*.h                 zos-working-tree-encoding=ibm-1047
+*.sh                zos-working-tree-encoding=ibm-1047
+*.out               zos-working-tree-encoding=ibm-1047
+*.md                zos-working-tree-encoding=ibm-1047
+Makefile            zos-working-tree-encoding=ibm-1047
+LICENSE             zos-working-tree-encoding=ibm-1047
+.clang-format       zos-working-tree-encoding=ibm-1047
+.clang-tidy         zos-working-tree-encoding=ibm-1047
+libedit/netbsd/**   zos-working-tree-encoding=ibm-1047
+libedit/patches/*   zos-working-tree-encoding=ibm-1047
+libedit/netbsd.sha256 zos-working-tree-encoding=ibm-1047
+
+# Nothing binary is tracked.  Anything binary added later must say so
+# here (e.g. "*.png binary") so git neither converts nor re-ends it.

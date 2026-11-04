@@ -159,7 +159,7 @@ install:
 # ASCII; on z/OS extract as tagged EBCDIC with:
 #   pax -rf zash.tar -ofrom=ISO8859-1,to=IBM-1047 -o setfiletag
 DIST = LICENSE README.md DESIGN.md Makefile *.c *.h tests bench \
-	.clang-format .clang-tidy .gitattributes
+	.clang-format .clang-tidy .gitattributes .gitignore
 DIST_LIBEDIT = libedit/Makefile libedit/LICENSE libedit/README.md \
 	libedit/netbsd.sha256 libedit/netbsd libedit/patches libedit/port
 
