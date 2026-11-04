@@ -78,7 +78,10 @@ own:
 make CC=clang CFLAGS='-std=c11 -O2 -Wall -Wextra'
 ```
 
-This produces `libedit.a` and `include/histedit.h`. Only `histedit.h` is
+This produces `libedit.a` and `include/histedit.h`. The archive's members
+are named `le_*.o`. The z/OS binder (as xlc drives it) skips an archive
+member whose name matches an object already on the link line, and zash
+has its own `prompt.o`, `parse.o` and `history.o`. Only `histedit.h` is
 copied to `include/`, because several upstream headers (`search.h`,
 `tty.h`) share names with system headers.
 

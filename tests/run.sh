@@ -9,7 +9,7 @@ case $sh_under_test in
 */*) sh_under_test=$(cd "$(dirname "$sh_under_test")" && pwd)/$(basename "$sh_under_test") ;;
 esac
 dir=$(cd "$(dirname "$0")" && pwd)
-T=$(mktemp -d) || exit 1
+T=$(mktemp -d 2>/dev/null) || { T=${TMPDIR:-/tmp}/zash-test.$$; mkdir "$T"; } || exit 1
 trap 'rm -rf "$T"' EXIT
 SH=$sh_under_test
 export T SH

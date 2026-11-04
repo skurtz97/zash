@@ -2,7 +2,7 @@
  * Word expansion.  A raw word is walked once, producing the expanded
  * bytes plus a parallel array of marks recording where each byte came
  * from.  Field splitting and pathname expansion then consult the marks,
- * so no in-band escape bytes are needed (see the EBCDIC note in parse.c).
+ * so no in-band escape bytes are needed (see the EBCDIC note in zparse.c).
  */
 #include <ctype.h>
 #include <fnmatch.h>
