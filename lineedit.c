@@ -76,7 +76,7 @@ int le_init(void) {
     if (el == NULL)
         return -1;
     hist = history_init();
-    /* history.c owns trimming (HISTSIZE); libedit must never drop first */
+    /* zhistory.c owns trimming (HISTSIZE); libedit must never drop first */
     history(hist, &hev, H_SETSIZE, 1000000);
     el_set(el, EL_HIST, history, hist);
     /* text between PROMPT_IGNORE pairs (\[ \]) has no width */

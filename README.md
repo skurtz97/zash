@@ -102,6 +102,12 @@ text. That works for both compilers, for `/bin/sh` and, through automatic
 conversion, for an ASCII-mode zash. All shipped files are plain ASCII, so
 the conversion is lossless.
 
+Cloning with git on z/OS (zopen or IBM Open Enterprise git) gives the
+same result: `.gitattributes` asks for an IBM-1047 working tree, so
+`git clone` and then `make zos` work directly with no `pax` step. Run
+`make verify` in `libedit/` on Linux only: it checksums the vendored
+sources as ASCII bytes.
+
 Line editing works in both modes. In EBCDIC mode libedit runs on
 native IBM-1047 characters, and `make check` also runs a test comparing
 its character table with z/OS's own conversion. Other EBCDIC code pages
@@ -292,9 +298,9 @@ upstream plus the patch.
 - **Vendored code is exempt.** `libedit/netbsd/` has its own
   `.clang-format` and `.clang-tidy` that switch both tools off, because it
   is kept as upstream plus one patch.
-- **`.gitattributes`** keeps LF line endings on the files that are
-  compared byte for byte: test scripts and expected output, the vendored
-  sources and their patch.
+- **`.gitattributes`** keeps LF line endings everywhere (the tests, the
+  vendored sources and their patch are compared byte for byte) and, on
+  z/OS, checks the text out as IBM-1047 and tags it.
 
 ## Source layout
 
@@ -303,14 +309,14 @@ upstream plus the patch.
 | `shell.h` | shared declarations |
 | `main.c` | startup, options, errors, top-level loop |
 | `input.c` | input sources; keeps stdin offsets correct for scripts on stdin |
-| `parse.c` | lexer and recursive-descent parser, here-documents |
+| `zparse.c` | lexer and recursive-descent parser, here-documents |
 | `expand.c` | expansion, field splitting, globbing, arithmetic |
 | `eval.c` | evaluation, pipelines, background jobs, `$(...)` |
 | `exec.c` | PATH hash, functions, redirections, fd plans |
 | `var.c` | variables and the cached environment |
 | `jobs.c` | background process table |
 | `builtins.c` | POSIX builtins |
-| `lineedit.c` `complete.c` `prompt.c` `history.c` | interactive features |
+| `lineedit.c` `complete.c` `zprompt.c` `zhistory.c` | interactive features |
 | `sys_posix.c` `sys_zos.c` | platform layer: spawn, opening redirections, tagging |
 | `zos_builtins.c` | `tso`, `chtag`, `extattr` |
 | `mem.c` | arena allocator and growable buffers |

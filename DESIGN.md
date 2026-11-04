@@ -42,9 +42,9 @@ collided with one.
 | `input.c` | Input source stack: strings, fds (4 KB reads), interactive |
 | `lineedit.c` | libedit setup: emacs/vi, history, `~/.editrc`, prompt width escapes |
 | `complete.c` | TAB completion: commands, files, `$VAR`, quote-aware |
-| `prompt.c` | bash-compatible `PS1`/`PS2` escapes and expansion |
-| `history.c` | Numbered history, `HISTFILE`, `fc`, `history` |
-| `parse.c` | Lexer + recursive-descent parser, here-docs, function-body deep copy |
+| `zprompt.c` | bash-compatible `PS1`/`PS2` escapes and expansion |
+| `zhistory.c` | Numbered history, `HISTFILE`, `fc`, `history` |
+| `zparse.c` | Lexer + recursive-descent parser, here-docs, function-body deep copy |
 | `expand.c` | Parameter, command, arithmetic, tilde expansion; field split; glob |
 | `var.c` | Variable hash table, cached exported environment |
 | `exec.c` | PATH hash, functions, redirection, fd plans |
@@ -198,7 +198,7 @@ They come from NetBSD `src` commit `91af1a58`. FreeBSD's
 
 ## Interactive features
 
-**Prompt** (`prompt.c`): bash's escapes (`\u \h \H \w \W \$ \t \T \@ \A
+**Prompt** (`zprompt.c`): bash's escapes (`\u \h \H \w \W \$ \t \T \@ \A
 \d \D{fmt} \j \! \# \s \v \V \n \e \nnn \\`) are decoded, then the result
 gets parameter expansion and `$(...)`, as with bash's `promptvars`. `\[ \]`
 become libedit `EL_PROMPT_ESC` markers so colour codes take no width; a bash
@@ -222,7 +222,7 @@ Ambiguous matches insert the common prefix, then list in columns sized to
 the terminal, asking first past 100. PATH directories are cached and
 rescanned only when their mtime changes.
 
-**History** (`history.c`): zash owns the numbered list; libedit gets a copy
+**History** (`zhistory.c`): zash owns the numbered list; libedit gets a copy
 for arrow-key recall. `HISTFILE` (default `~/.zash_history`) is plain text,
 one entry per line, compatible with bash's file. At exit, only this
 session's new entries are appended with a single `O_APPEND` write, then the

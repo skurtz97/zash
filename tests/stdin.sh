@@ -2,9 +2,10 @@
 printf 'read x\ndata-line\necho "read [$x]"\n' > "$T/s1"
 "$SH" < "$T/s1"
 printf 'read x\ndata-line\necho "read [$x]"\n' | "$SH"
-# a child reading a regular file consumes exactly one line (head seeks
-# back on files; on pipes it over-reads whatever the shell does)
-printf 'head -n 1\nskipped line\necho after-head\n' > "$T/s2"
+# a child reading a regular file gets exactly the next line (a shell's
+# read must not consume past it; head is not required to seek back)
+printf 'read l; echo "child [$l]"\n' > "$T/child.sh"
+printf '"$SH" "$T/child.sh"\nskipped line\necho after-child\n' > "$T/s2"
 "$SH" < "$T/s2"
 # multi-line compound command, then read
 printf 'if true; then\n  echo in-if\nfi\nread y\nline-for-y\necho "y=[$y]"\n' | "$SH"

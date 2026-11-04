@@ -50,7 +50,7 @@ char *sb_cstr(struct sbuf *b);  /* NUL-terminate, return b->s */
 char *sb_arena(struct sbuf *b); /* copy into arena, reset buffer */
 void sb_free(struct sbuf *b);
 
-/* ---- parse tree (parse.c) --------------------------------------------- */
+/* ---- parse tree (zparse.c) --------------------------------------------- */
 
 struct word {
     struct word *next;
@@ -163,7 +163,7 @@ void le_end(void);
 void le_set_editor(const char *mode);
 void le_history_clear(void);
 
-/* history.c */
+/* zhistory.c */
 void zhist_init(void);
 void zhist_add(const char *line);
 void zhist_save(void);
@@ -171,7 +171,7 @@ int zhist_next_number(void);
 int b_fc(int argc, char **argv);
 int b_history(int argc, char **argv);
 
-/* prompt.c, complete.c */
+/* zprompt.c, complete.c */
 #define PROMPT_IGNORE '\001' /* brackets \[ \] text for EL_PROMPT_ESC */
 const char *prompt_expand(const char *ps);
 void complete_add(void *cands, const char *name);

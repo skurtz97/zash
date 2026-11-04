@@ -2,7 +2,7 @@
 printf 'one\ntwo\nthree\n' > "$T/r.txt"
 { read a; cat; } < "$T/r.txt"
 printf 'p1\np2\np3\n' | { read a; echo "got=$a"; cat; }
-{ read a; read b; echo "$a|$b"; head -1; } < "$T/r.txt"
+{ read a; read b; echo "$a|$b"; head -n 1; } < "$T/r.txt"
 # line longer than one chunk, and a continuation across lines
 awk 'BEGIN { for (i = 0; i < 700; i++) printf "x"; printf " tail\nnext\n" }' > "$T/long.txt"
 { read a b; echo "${#a} $b"; cat; } < "$T/long.txt"

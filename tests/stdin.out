@@ -1,7 +1,7 @@
 read [data-line]
 read [data-line]
-skipped line
-after-head
+child [skipped line]
+after-child
 in-if
 y=[line-for-y]
 in-if

@@ -55,7 +55,10 @@ LIBEDIT_ZOS  = -D_ALL_SOURCE -D_UNIX03_THREADS -Iport/zos
 # non-XPLINK (-m32n), which rejects -fzos-le-char-mode=ascii.
 OXL_CC      = ibm-clang
 OXL_ASCII   = -fzos-le-char-mode=ascii
-OXL_CFLAGS  = -m64 -std=c11 -O2 -Wall -Wextra $(OXL_ASCII)
+# -Wno-char-subscripts: z/OS <stdio.h>'s putchar() macro indexes a table
+# with (char)(c), so every putchar() call warns; the code is fine.
+OXL_CFLAGS  = -m64 -std=c11 -O2 -Wall -Wextra -Wno-char-subscripts \
+	$(OXL_ASCII)
 OXL_LDFLAGS = -m64
 
 # IBM z/OS XL C.  -qlanglvl=extc1x is its C11 level; -q64 is LP64,
@@ -66,8 +69,13 @@ XLC_ASCII   = -qascii -D_ENHANCED_ASCII_EXT=0xFFFFFFFF
 XLC_CFLAGS  = -q64 -qxplink -qlanglvl=extc1x -O2 $(XLC_ASCII)
 XLC_LDFLAGS = -q64 -qxplink
 
-OBJS = main.o mem.o input.o lineedit.o complete.o prompt.o history.o \
-	parse.o expand.o var.o exec.o eval.o jobs.o builtins.o \
+# No zash source may share a basename with a libedit source: xlc names
+# an object's code and static sections after the source file, and the
+# z/OS binder keeps only the first section of a given name, so the
+# second file's functions silently vanish (IEW2456E at link time).
+# Hence zprompt.c, zparse.c, zhistory.c.  "make names" checks this.
+OBJS = main.o mem.o input.o lineedit.o complete.o zprompt.o zhistory.o \
+	zparse.o expand.o var.o exec.o eval.o jobs.o builtins.o \
 	zos_builtins.o $(SYSOBJ)
 
 all: zash
@@ -129,7 +137,14 @@ compdb: $(EDIT_DEP)
 	    compile_commands.json && \
 	echo "compile_commands.json: $$(grep -c '"file"' compile_commands.json) entries"
 
-check:
+names:
+	@dup=; for f in *.c; do for d in libedit/netbsd/libedit \
+	    libedit/netbsd/libc libedit/port; do test -f $$d/$$f && \
+	    dup="$$dup $$f"; done; done; test -z "$$dup" || { echo \
+	    "basename shared with libedit:$$dup (breaks the xlc link)" >&2; \
+	    exit 1; }
+
+check: names
 	@test -x zash || { echo 'zash not built; run make first' >&2; exit 1; }
 	./tests/run.sh ./zash
 	@if test -x libedit/charset_test; then libedit/charset_test && \

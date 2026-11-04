@@ -8,7 +8,7 @@ rc=3
 sub nested
 backq
 csrc
-C B A
+A-B-C
 zash /usr/local/bin 19 dflt
 heredoc 5
 literal $x
@@ -21,7 +21,7 @@ two three 2
 [three]
 tilde-ok
 /
-bg-rc=0
+bg-rc=3
 a=first b=second third
 2
 $T/nomatch*
