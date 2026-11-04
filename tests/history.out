@@ -1,0 +1,30 @@
+one
+two
+two
+hidden
+    1	echo one
+    2	echo two
+    3	history
+    1	echo one
+    2	echo two
+echo TWO
+TWO
+	echo one
+	echo two
+echo ONE
+ONE
+--- file:
+echo one
+echo two
+history
+fc -l -3 -2
+echo TWO
+fc -ln 1 2
+echo ONE
+-rw-------
+    7	echo ONE
+    8	history 2
+--- trimmed:
+fc -ln 1 2
+echo ONE
+history 2

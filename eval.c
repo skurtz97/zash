@@ -186,8 +186,8 @@ spawn_external(struct node *n, struct cmdinfo *ci, struct fdplan *fp)
 	struct var_save *vs;
 	pid_t pid;
 
-	in_sync();      /* stdin script: child must start after this command */
 	/* assignments first so `_TAG_REDIR_OUT=TXT cmd >f` sees the var */
+	in_sync();
 	vs = var_save_and_set(n->u.cmd.assigns);
 	if (fdplan_build(fp, n->redirs) < 0) {
 		var_restore(vs);

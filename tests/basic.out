@@ -1,0 +1,31 @@
+hello world
+y=16
+a-b-c-
+big
+n=3
+f got 2 args: 1 2 3
+rc=3
+sub nested
+backq
+csrc
+C B A
+zash /usr/local/bin 19 dflt
+heredoc 5
+literal $x
+out
+pipe rc=0
+or-ok
+and-ok
+two three 2
+[two]
+[three]
+tilde-ok
+/
+bg-rc=0
+a=first b=second third
+2
+$T/nomatch*
+nf=127
+i=5
+x=unset
+type-ok

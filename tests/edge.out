@@ -1,0 +1,32 @@
+<a b><><c>
+<a><b><c>
+<a b  c>
+<x>
+<><>
+<a><b><><c>
+single "dq" 
+ double 'sq' $HOME \ " x
+nested in deep
+to-stderr
+swallowed
+got:err
+via3
+evald
+fromdot
+3628800
+subshell read: x=unset
+1a
+2a
+3a
+child x=1
+parent x=unset
+assigned
+[] alt
+tabs stripped assigned
+trail|
+dir:/
+dir:/tmp
+negated
+exit test
+rc=7
+still-here
