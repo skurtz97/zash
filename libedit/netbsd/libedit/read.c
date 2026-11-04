@@ -246,7 +246,7 @@ read_getcmd(EditLine *el, el_action_t *cmdnum, wchar_t *ch)
 
 		if (el->el_state.metanext) {
 			el->el_state.metanext = 0;
-			*ch |= meta;
+			*ch = EL_META(*ch, meta);
 		}
 		if (*ch >= N_KEYS)
 			cmd = ED_INSERT;

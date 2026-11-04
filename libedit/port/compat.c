@@ -18,58 +18,52 @@
  * one that has since dropped privileges.  libedit uses it only to
  * decide whether to read ~/.editrc.
  */
-int
-libedit_issetugid(void)
-{
-	return getuid() != geteuid() || getgid() != getegid();
+int libedit_issetugid(void) {
+    return getuid() != geteuid() || getgid() != getegid();
 }
 
 #ifdef LIBEDIT_NEED_GETLINE
-ssize_t
-libedit_getline(char **lineptr, size_t *n, FILE *fp)
-{
-	size_t len = 0;
-	int c;
+ssize_t libedit_getline(char **lineptr, size_t *n, FILE *fp) {
+    size_t len = 0;
+    int c;
 
-	if (lineptr == NULL || n == NULL || fp == NULL) {
-		errno = EINVAL;
-		return -1;
-	}
-	if (*lineptr == NULL || *n == 0) {
-		*n = 128;
-		if ((*lineptr = malloc(*n)) == NULL)
-			return -1;
-	}
-	while ((c = getc(fp)) != EOF) {
-		if (len + 2 > *n) {
-			size_t nn = *n * 2;
-			char *p = realloc(*lineptr, nn);
+    if (lineptr == NULL || n == NULL || fp == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (*lineptr == NULL || *n == 0) {
+        *n = 128;
+        if ((*lineptr = malloc(*n)) == NULL)
+            return -1;
+    }
+    while ((c = getc(fp)) != EOF) {
+        if (len + 2 > *n) {
+            size_t nn = *n * 2;
+            char *p = realloc(*lineptr, nn);
 
-			if (p == NULL)
-				return -1;
-			*lineptr = p;
-			*n = nn;
-		}
-		(*lineptr)[len++] = (char)c;
-		if (c == '\n')
-			break;
-	}
-	if (len == 0)
-		return -1;
-	(*lineptr)[len] = '\0';
-	return (ssize_t)len;
+            if (p == NULL)
+                return -1;
+            *lineptr = p;
+            *n = nn;
+        }
+        (*lineptr)[len++] = (char)c;
+        if (c == '\n')
+            break;
+    }
+    if (len == 0)
+        return -1;
+    (*lineptr)[len] = '\0';
+    return (ssize_t)len;
 }
 #endif
 
 #ifdef LIBEDIT_NEED_WCSDUP
-wchar_t *
-libedit_wcsdup(const wchar_t *s)
-{
-	size_t n = wcslen(s) + 1;
-	wchar_t *p = malloc(n * sizeof(wchar_t));
+wchar_t *libedit_wcsdup(const wchar_t *s) {
+    size_t n = wcslen(s) + 1;
+    wchar_t *p = malloc(n * sizeof(wchar_t));
 
-	if (p != NULL)
-		memcpy(p, s, n * sizeof(wchar_t));
-	return p;
+    if (p != NULL)
+        memcpy(p, s, n * sizeof(wchar_t));
+    return p;
 }
 #endif

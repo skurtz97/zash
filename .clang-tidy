@@ -1,0 +1,50 @@
+# clang-tidy checks for zash. clangd (run with --clang-tidy) reads
+# this file, so the editor shows the same findings as a manual run
+# (`make compdb` first, for compile_commands.json):
+#   clang-tidy -p . *.c libedit/port/*.c
+#
+# libedit/netbsd/ is vendored upstream code; libedit/netbsd/.clang-tidy
+# turns every check off there.
+#
+# Disabled on purpose:
+#   readability-magic-numbers          signal numbers, exit statuses (126,
+#                                      127, 128+n) and fd 0-2 are the
+#                                      readable form
+#   readability-identifier-length      short names (lx, t, p) are the
+#                                      house style
+#   readability-braces-around-statements
+#   readability-isolate-declaration    style choices, not bugs
+#   readability-function-cognitive-complexity
+#                                      the lexer and evaluator are flat
+#                                      switches
+#   readability-implicit-bool-conversion
+#                                      a C++ check: in C the language
+#                                      itself promotes bool to int in
+#                                      &&, ||, ! and ?:, so every bool
+#                                      condition is flagged (newer
+#                                      clang-tidy applies it to C)
+#   bugprone-easily-swappable-parameters
+#                                      too noisy for small helpers
+#   cert-err33-c                       unchecked printf/fputs results
+#   clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling
+#                                      suggests C11 Annex K (fprintf_s),
+#                                      which glibc and z/OS don't ship
+Checks: >
+  -*,
+  bugprone-*,
+  cert-*,
+  clang-analyzer-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  -readability-magic-numbers,
+  -readability-identifier-length,
+  -readability-braces-around-statements,
+  -readability-isolate-declaration,
+  -readability-function-cognitive-complexity,
+  -readability-implicit-bool-conversion,
+  -bugprone-easily-swappable-parameters,
+  -cert-err33-c,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling
+# zash's own headers (shell.h, libedit/port/*.h), not vendored ones
+HeaderFilterRegex: '(^|/)(shell\.h|libedit/port/.*\.h)$'

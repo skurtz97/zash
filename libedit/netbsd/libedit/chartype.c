@@ -289,10 +289,10 @@ ct_visual_char(wchar_t *dst, size_t len, wchar_t c)
 		if (len < 2)
 			return -1;   /* insufficient space */
 		*dst++ = '^';
-		if (c == '\177')
+		if (c == EL_DEL)
 			*dst = '?'; /* DEL -> ^? */
 		else
-			*dst = c | 0100;    /* uncontrolify it */
+			*dst = EL_UNCTRL(c);    /* uncontrolify it */
 		return 2;
 	case CHTYPE_PRINT:
 		if (len < 1)

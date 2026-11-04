@@ -1029,18 +1029,18 @@ static void
 terminal_reset_arrow(EditLine *el)
 {
 	funckey_t *arrow = el->el_terminal.t_fkey;
-	static const wchar_t strA[] = L"\033[A";
-	static const wchar_t strB[] = L"\033[B";
-	static const wchar_t strC[] = L"\033[C";
-	static const wchar_t strD[] = L"\033[D";
-	static const wchar_t strH[] = L"\033[H";
-	static const wchar_t strF[] = L"\033[F";
-	static const wchar_t stOA[] = L"\033OA";
-	static const wchar_t stOB[] = L"\033OB";
-	static const wchar_t stOC[] = L"\033OC";
-	static const wchar_t stOD[] = L"\033OD";
-	static const wchar_t stOH[] = L"\033OH";
-	static const wchar_t stOF[] = L"\033OF";
+	static const wchar_t strA[] = EL_WESC L"[A";
+	static const wchar_t strB[] = EL_WESC L"[B";
+	static const wchar_t strC[] = EL_WESC L"[C";
+	static const wchar_t strD[] = EL_WESC L"[D";
+	static const wchar_t strH[] = EL_WESC L"[H";
+	static const wchar_t strF[] = EL_WESC L"[F";
+	static const wchar_t stOA[] = EL_WESC L"OA";
+	static const wchar_t stOB[] = EL_WESC L"OB";
+	static const wchar_t stOC[] = EL_WESC L"OC";
+	static const wchar_t stOD[] = EL_WESC L"OD";
+	static const wchar_t stOH[] = EL_WESC L"OH";
+	static const wchar_t stOF[] = EL_WESC L"OF";
 
 	keymacro_add(el, strA, &arrow[A_K_UP].fun, arrow[A_K_UP].type);
 	keymacro_add(el, strB, &arrow[A_K_DN].fun, arrow[A_K_DN].type);

@@ -1031,7 +1031,7 @@ FUNW(history)(TYPE(History) *h, TYPE(HistEvent) *ev, int fun, ...)
 		break;
 
 	case H_DEL:
-		retval = HDEL(h, ev, va_arg(va, const int));
+		retval = HDEL(h, ev, va_arg(va, int));
 		break;
 
 	case H_ENTER:
@@ -1067,7 +1067,7 @@ FUNW(history)(TYPE(History) *h, TYPE(HistEvent) *ev, int fun, ...)
 		break;
 
 	case H_SET:
-		retval = HSET(h, ev, va_arg(va, const int));
+		retval = HSET(h, ev, va_arg(va, int));
 		break;
 
 	case H_CLEAR:

@@ -984,8 +984,8 @@ map_init_nls(EditLine *el)
 	el_action_t *map = el->el_map.key;
 
 	for (i = 0200; i <= 0377; i++)
-		if (iswprint(i))
-			map[i] = ED_INSERT;
+		if (iswprint(EL_A2N(i)))
+			map[EL_A2N(i)] = ED_INSERT;
 }
 
 
@@ -1007,7 +1007,7 @@ map_init_meta(EditLine *el)
 		for (i = 0; i <= 0377 && alt[i] != EM_META_NEXT; i++)
 			continue;
 		if (i > 0377) {
-			i = 033;
+			i = EL_ESC;
 			if (el->el_map.type == MAP_VI)
 				map = alt;
 		} else
@@ -1016,14 +1016,14 @@ map_init_meta(EditLine *el)
 	buf[0] = (wchar_t)i;
 	buf[2] = 0;
 	for (i = 0200; i <= 0377; i++)
-		switch (map[i]) {
+		switch (map[EL_A2N(i)]) {
 		case ED_INSERT:
 		case ED_UNASSIGNED:
 		case ED_SEQUENCE_LEAD_IN:
 			break;
 		default:
-			buf[1] = i & 0177;
-			keymacro_add(el, buf, keymacro_map_cmd(el, (int) map[i]), XK_CMD);
+			buf[1] = EL_A2N(i & 0177);
+			keymacro_add(el, buf, keymacro_map_cmd(el, (int) map[EL_A2N(i)]), XK_CMD);
 			break;
 		}
 	map[(int) buf[0]] = ED_SEQUENCE_LEAD_IN;
@@ -1048,8 +1048,8 @@ map_init_vi(EditLine *el)
 	keymacro_reset(el);
 
 	for (i = 0; i < N_KEYS; i++) {
-		key[i] = vii[i];
-		alt[i] = vic[i];
+		key[EL_A2N(i)] = vii[i];
+		alt[EL_A2N(i)] = vic[i];
 	}
 
 	map_init_meta(el);
@@ -1079,8 +1079,8 @@ map_init_emacs(EditLine *el)
 	keymacro_reset(el);
 
 	for (i = 0; i < N_KEYS; i++) {
-		key[i] = emacs[i];
-		alt[i] = ED_UNASSIGNED;
+		key[EL_A2N(i)] = emacs[i];
+		alt[EL_A2N(i)] = ED_UNASSIGNED;
 	}
 
 	map_init_meta(el);

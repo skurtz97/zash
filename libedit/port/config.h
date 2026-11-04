@@ -8,7 +8,7 @@
 #include "port.h"
 
 #define HAVE_GETPW_R_POSIX 1
-#define HAVE_ISSETUGID 1        /* compat.c */
+#define HAVE_ISSETUGID 1 /* compat.c */
 /* struct dirent has no d_namlen on Linux or z/OS */
 
 #if defined(__MVS__)

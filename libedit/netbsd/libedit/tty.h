@@ -44,7 +44,7 @@
 #include <unistd.h>
 
 /* Define our own since everyone gets it wrong! */
-#define	CONTROL(A)	((A) & 037)
+#define	CONTROL(A)	EL_CTRL_C(A)
 
 /*
  * Aix compatible names

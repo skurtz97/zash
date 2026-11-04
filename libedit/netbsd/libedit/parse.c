@@ -153,28 +153,28 @@ parse__escape(const wchar_t **ptr)
 		p++;
 		switch (*p) {
 		case 'a':
-			c = '\007';	/* Bell */
+			c = '\a';	/* Bell */
 			break;
 		case 'b':
-			c = '\010';	/* Backspace */
+			c = '\b';	/* Backspace */
 			break;
 		case 't':
-			c = '\011';	/* Horizontal Tab */
+			c = '\t';	/* Horizontal Tab */
 			break;
 		case 'n':
-			c = '\012';	/* New Line */
+			c = '\n';	/* New Line */
 			break;
 		case 'v':
-			c = '\013';	/* Vertical Tab */
+			c = '\v';	/* Vertical Tab */
 			break;
 		case 'f':
-			c = '\014';	/* Form Feed */
+			c = '\f';	/* Form Feed */
 			break;
 		case 'r':
-			c = '\015';	/* Carriage Return */
+			c = '\r';	/* Carriage Return */
 			break;
 		case 'e':
-			c = '\033';	/* Escape */
+			c = EL_ESC;	/* Escape */
 			break;
 		case 'U':		/* Unicode \U+xxxx or \U+xxxxx format */
 		{
@@ -219,6 +219,7 @@ parse__escape(const wchar_t **ptr)
 			}
 			if ((c & (wint_t)0xffffff00) != (wint_t)0)
 				return -1;
+			c = EL_A2N(c);	/* zash: \nnn is an ASCII code */
 			--p;
 			break;
 		}
@@ -228,7 +229,7 @@ parse__escape(const wchar_t **ptr)
 		}
 	} else if (*p == '^') {
 		p++;
-		c = (*p == '?') ? '\177' : (*p & 0237);
+		c = (*p == '?') ? EL_DEL : EL_A2N(EL_N2A(*p) & 0237);
 	} else
 		c = *p;
 	*ptr = ++p;
@@ -259,7 +260,7 @@ parse__string(wchar_t *out, const wchar_t *in)
 
 		case 'M':
 			if (in[1] == '-' && in[2] != '\0') {
-				*out++ = '\033';
+				*out++ = EL_ESC;
 				in += 2;
 				break;
 			}

@@ -1,0 +1,3 @@
+# Vendored NetBSD sources: never reformat (see ../README.md).
+DisableFormat: true
+SortIncludes: Never

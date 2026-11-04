@@ -746,7 +746,7 @@ c_gets(EditLine *el, wchar_t *buf, const wchar_t *prompt)
 		switch (ch) {
 
 		case L'\b':	/* Delete and backspace */
-		case 0177:
+		case EL_DEL:
 			if (len == 0) {
 				len = -1;
 				break;
@@ -755,7 +755,7 @@ c_gets(EditLine *el, wchar_t *buf, const wchar_t *prompt)
 			cp--;
 			continue;
 
-		case 0033:	/* ESC */
+		case EL_ESC:	/* ESC */
 		case L'\r':	/* Newline */
 		case L'\n':
 			buf[len] = ch;

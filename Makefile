@@ -8,9 +8,9 @@
 #   make zos        z/OS, IBM Open XL C/C++ (ibm-clang, 64-bit)
 #   make xlc        z/OS, IBM z/OS XL C (xlc, 64-bit)
 #
-# z/OS builds are ASCII mode (zopen convention).  For EBCDIC, which the
-# bundled libedit does not support, also turn line editing off:
-#   make zos OXL_ASCII= EDIT_CPPFLAGS= EDIT_LIBS= EDIT_DEP=
+# z/OS builds are ASCII mode (zopen convention).  For EBCDIC (IBM-1047,
+# line editing included):
+#   make zos OXL_ASCII=        make xlc XLC_ASCII=
 #
 # Line editing uses the bundled NetBSD libedit (libedit/) by default.
 #   system libedit:  make EDIT_CPPFLAGS=-DWITH_LIBEDIT EDIT_LIBS=-ledit EDIT_DEP=
@@ -113,9 +113,27 @@ $(OBJS): shell.h .flags
 
 FORCE:
 
+# compile_commands.json for clangd and clang-tidy: every source this
+# build compiles, with its real flags.  Rerun after changing flags.
+compdb: $(EDIT_DEP)
+	@d=$$(pwd); cmd=$$(printf '%s' '$(CC) $(CFLAGS) $(CPPFLAGS)' | \
+	    sed 's/\\/\\\\/g; s/"/\\"/g'); \
+	{ echo '['; \
+	  (cd libedit && $(MAKE) -s CC='$(CC)' CFLAGS='$(CFLAGS)' \
+	      PLAT_CPPFLAGS='$(LIBEDIT_PLAT)' compdb-entries); \
+	  for f in $(OBJS:.o=.c); do \
+	    printf '{"directory":"%s","file":"%s","command":"%s -c %s"},\n' \
+	        "$$d" "$$f" "$$cmd" "$$f"; done; \
+	} | sed '$$s/,$$//' > compile_commands.json.new && echo ']' >> \
+	    compile_commands.json.new && mv compile_commands.json.new \
+	    compile_commands.json && \
+	echo "compile_commands.json: $$(grep -c '"file"' compile_commands.json) entries"
+
 check:
 	@test -x zash || { echo 'zash not built; run make first' >&2; exit 1; }
 	./tests/run.sh ./zash
+	@if test -x libedit/charset_test; then libedit/charset_test && \
+	    echo 'libedit charset test passed'; fi
 
 install:
 	@test -x zash || { echo 'zash not built; run make first' >&2; exit 1; }
@@ -125,9 +143,10 @@ install:
 # Source tarball for z/OS (ustar, top directory zash/).  All files are
 # ASCII; on z/OS extract as tagged EBCDIC with:
 #   pax -rf zash.tar -ofrom=ISO8859-1,to=IBM-1047 -o setfiletag
-DIST = LICENSE README.md DESIGN.md Makefile *.c *.h tests bench
+DIST = LICENSE README.md DESIGN.md Makefile *.c *.h tests bench \
+	.clang-format .clang-tidy .gitattributes
 DIST_LIBEDIT = libedit/Makefile libedit/LICENSE libedit/README.md \
-	libedit/netbsd.sha256 libedit/netbsd libedit/port
+	libedit/netbsd.sha256 libedit/netbsd libedit/patches libedit/port
 
 dist:
 	rm -rf .dist zash.tar && mkdir -p .dist/zash/libedit
@@ -137,6 +156,6 @@ dist:
 	rm -rf .dist
 
 clean:
-	rm -f zash *.o .flags .flags.new zash.tar
+	rm -f zash *.o .flags .flags.new zash.tar compile_commands.json.new
 	rm -rf .dist
 	cd libedit && $(MAKE) clean

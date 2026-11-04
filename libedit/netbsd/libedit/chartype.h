@@ -39,7 +39,8 @@
 	!(defined(__APPLE__) && defined(__MACH__)) && \
 	!defined(__OpenBSD__) && \
 	!defined(__FreeBSD__) && \
-	!defined(__DragonFly__)
+	!defined(__DragonFly__) && \
+	!defined(__MVS__)	/* zash: z/OS, ASCII or EBCDIC (port.h) */
 #ifndef __STDC_ISO_10646__
 /* In many places it is assumed that the first 127 code points are ASCII
  * compatible, so ensure wchar_t indeed does ISO 10646 and not some other
@@ -51,7 +52,7 @@
 /* Oh for a <uchar.h> with char32_t and __STDC_UTF_32__ in it...
  * ref: ISO/IEC DTR 19769
  */
-#if WCHAR_MAX < INT32_MAX
+#if WCHAR_MAX < INT32_MAX && !defined(__MVS__)	/* zash: xlc has no #warning */
 #warning Build environment does not support non-BMP characters
 #endif
 

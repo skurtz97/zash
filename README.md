@@ -6,8 +6,9 @@ NetBSD libedit, bash-compatible
 prompts and history, and z/OS support for `spawn()`, file tagging, MVS
 data sets and TSO.
 
-The line-editing library in `libedit/` is NetBSD code, unmodified apart
-from the port layer; see [libedit/README.md](libedit/README.md).
+The line-editing library in `libedit/` is NetBSD code. Apart from the
+port layer, the only change is a small, verified patch for EBCDIC and
+xlc; see [libedit/README.md](libedit/README.md).
 FreeBSD sh, oksh and BusyBox ash were used as references only. The shell is
 new, and nothing was copied from BusyBox (GPLv2).
 
@@ -101,13 +102,10 @@ text. That works for both compilers, for `/bin/sh` and, through automatic
 conversion, for an ASCII-mode zash. All shipped files are plain ASCII, so
 the conversion is lossless.
 
-The bundled libedit is ASCII-only: its key tables are indexed by ASCII
-code, and `libedit/port/port.h` stops an EBCDIC build with an error. An
-EBCDIC zash must therefore be built without line editing:
-
-```sh
-make zos OXL_ASCII= EDIT_CPPFLAGS= EDIT_LIBS= EDIT_DEP=
-```
+Line editing works in both modes. In EBCDIC mode libedit runs on
+native IBM-1047 characters, and `make check` also runs a test comparing
+its character table with z/OS's own conversion. Other EBCDIC code pages
+aren't supported.
 
 To use zopen's ncurses instead of system curses:
 
@@ -115,8 +113,8 @@ To use zopen's ncurses instead of system curses:
 make zos TERMLIB_ZOS='-L$ZOPEN_ROOT/lib -lncurses'
 ```
 
-libedit hasn't been built on z/OS yet; [libedit/README.md](libedit/README.md)
-lists what to check.
+Neither mode has been fully built on z/OS yet;
+[libedit/README.md](libedit/README.md) lists what to check.
 
 ## Usage
 
@@ -275,6 +273,28 @@ file. Use `tests/run.sh -v ./zash` to see diffs.
 Most expected output was generated with dash. `stdin.sh` uses bash's
 output, because dash handles a script read from stdin incorrectly.
 `history.sh` was checked by hand.
+
+`make check` also runs `libedit/charset_test`, which checks the EBCDIC
+character handling (it does nothing in an ASCII build). On Linux,
+`cd libedit && make test-ebcdic` checks the EBCDIC code paths with gcc's
+EBCDIC literals, and `make verify` confirms the vendored sources are
+upstream plus the patch.
+
+## Editor and tooling
+
+- **`make compdb`** writes `compile_commands.json` for clangd and
+  clang-tidy. It covers every zash and libedit source with the flags the
+  build actually uses; rerun it after changing flags.
+- **`.clang-format`** (clang-format 21 or later) and **`.clang-tidy`** set
+  the house style and checks:
+  `clang-format -i *.c *.h libedit/port/*.[ch]`,
+  `clang-tidy -p . *.c libedit/port/*.c`.
+- **Vendored code is exempt.** `libedit/netbsd/` has its own
+  `.clang-format` and `.clang-tidy` that switch both tools off, because it
+  is kept as upstream plus one patch.
+- **`.gitattributes`** keeps LF line endings on the files that are
+  compared byte for byte: test scripts and expected output, the vendored
+  sources and their patch.
 
 ## Source layout
 

@@ -1,0 +1,34 @@
+# clang-format style for zash; needs clang-format 21 or later. clangd and
+# most editors pick this up and format on save. By hand:
+#     clang-format -i *.c *.h libedit/port/*.[ch] libedit/port/*/*.c
+#
+# libedit/netbsd/ is vendored upstream code and is never reformatted
+# (libedit/netbsd/.clang-format turns formatting off there); keeping
+# it byte-identical keeps libedit/patches/zash.patch small.
+#
+# Hand-laid tables (character classes, keyword lookups, operator
+# switches) are wrapped in /* clang-format off */ ... /* clang-format on */
+# so their layout is kept.
+BasedOnStyle: LLVM
+IndentWidth: 4
+ColumnLimit: 80
+
+# Braces on the same line as the function header, like every block.
+BreakBeforeBraces: Attach
+
+# Bodies always on their own lines...
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Never
+# ...except one-line cases, kept aligned as a table:
+#     case R_IN:    return "<";
+AllowShortCaseLabelsOnASingleLine: true
+AlignConsecutiveShortCaseStatements:
+  Enabled: true
+IndentCaseLabels: false
+
+PointerAlignment: Right      # char *p
+ReflowComments: Never        # comments are wrapped by hand
+IncludeBlocks: Preserve      # own header, then system, then project
+SpaceBeforeParens: ControlStatements

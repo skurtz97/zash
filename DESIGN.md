@@ -162,8 +162,10 @@ the libc helpers it needs (`vis.c`, `unvis.c`, `strlcpy.c`, `strlcat.c`).
 They come from NetBSD `src` commit `91af1a58`. FreeBSD's
 `contrib/libedit` tracks the same code.
 
-- **Upstream stays byte-identical.** `make -C libedit verify` checks the
-  files against `netbsd.sha256` and rejects added files.
+- **Upstream plus one patch.** `libedit/patches/zash.patch` (9 files, 86
+  lines) replaces hard-coded ASCII with `port.h` macros, and fixes two
+  z/OS build errors. `make verify` undoes the patch on a copy, checks the
+  result against `netbsd.sha256`, and rejects added files.
 - **Porting lives in `libedit/port/`.**
   - `config.h` replaces NetBSD's and selects features per platform, with
     no configure step.
@@ -179,8 +181,15 @@ They come from NetBSD `src` commit `91af1a58`. FreeBSD's
 - **Only `histedit.h` is exposed** to zash (copied to `libedit/include/`).
   Upstream also has headers named `search.h` and `tty.h`, which would
   shadow system headers.
-- **ASCII builds only.** `map.c`'s key tables are indexed by ASCII code;
-  `port.h` stops an EBCDIC build with an error.
+- **ASCII and EBCDIC.** The probe (`libedit/port/probe`) showed that z/OS
+  EBCDIC builds use native values everywhere: `'a'` == `L'a'` ==
+  `mbrtowc("a")` == 0x81. So libedit runs on native characters, and only
+  its ASCII arithmetic is translated: key-table slots, the meta bit,
+  `^X`, DEL, ESC, and `.editrc` escapes. Constant forms (`EL_ESC`,
+  `EL_DEL`, `EL_CTRL_C`) serve `case` labels and static initializers. The
+  IBM-1047 table follows z/OS in pairing NL 0x15 with LF; on z/OS,
+  `make check` compares it with iconv. On Linux, `make test-ebcdic`
+  compiles everything with gcc's EBCDIC literals.
 - **Omitted:** `readline.c`, the GNU-readline compatibility layer. zash
   doesn't use it, and it needs the non-POSIX `getpwent_r`.
 - **Warnings:** clang `-Wall -Wextra -pedantic` is clean. That needed one
