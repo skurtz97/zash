@@ -290,10 +290,8 @@ static int pipeline(struct node *n) {
         struct cmdinfo ci;
 
         if (i + 1 < ns) {
-            if (pipe(pfd) < 0)
+            if (sys_pipe(pfd) < 0)
                 sh_error("pipe: %s", strerror(errno));
-            fcntl(pfd[0], F_SETFD, FD_CLOEXEC);
-            fcntl(pfd[1], F_SETFD, FD_CLOEXEC);
         }
         in = prev >= 0 ? prev : 0;
         out = pfd[1] >= 0 ? pfd[1] : 1;
@@ -620,10 +618,8 @@ char *cmdsubst(const char *src) {
     if (t == NULL)
         return astrdup("");
     fflush(NULL);
-    if (pipe(pfd) < 0)
+    if (sys_pipe(pfd) < 0)
         sh_error("pipe: %s", strerror(errno));
-    fcntl(pfd[0], F_SETFD, FD_CLOEXEC);
-    fcntl(pfd[1], F_SETFD, FD_CLOEXEC);
 
     if (t->type == N_CMD) {
         struct cmdinfo ci;

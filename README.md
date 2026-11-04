@@ -219,11 +219,16 @@ status 2.
   cannot change user identity, and they end if the shell ends. Scripts
   without `#!` are run by zash itself, unless `_BPX_SPAWN_SCRIPT=YES` lets
   spawn handle them first.
-- **Redirection tagging.** `_TAG_REDIR_IN`, `_TAG_REDIR_OUT` and
-  `_TAG_REDIR_ERR` (`TXT` or `BIN`) behave as documented for `sh` in the
-  z/OS UNIX Command Reference. Untagged output files get a deferred tag,
-  set at the first write. Input files have automatic conversion turned on
-  or off. A one-command form like `_TAG_REDIR_OUT=TXT cmd >file` works.
+- **Tagging.** Each build follows the conventions of the tools around it.
+  The ASCII build (the default) follows zopen: pipes are tagged ISO8859-1,
+  so output from EBCDIC programs is converted for zash, and new files made
+  by a redirection take the tag named by `_ENCODE_FILE_NEW` (`ISO8859-1`,
+  the default, `IBM-1047` or `BINARY`). The EBCDIC build follows `sh` in
+  the z/OS UNIX Command Reference: `_TAG_REDIR_OUT` and `_TAG_REDIR_ERR`
+  (`TXT` or `BIN`) give untagged output files a deferred tag, set at the
+  first write. In both builds `_TAG_REDIR_IN` turns conversion of input
+  files on or off, and a one-command form like `_TAG_REDIR_OUT=TXT cmd
+  >file` works.
 - **MVS data sets.** `cmd >"//'HLQ.DATA.SET'"` and `cmd <"//DD:NAME"` go
   through a small helper process, because `open()` cannot open data sets.
   The shell does not wait for that helper before running the next command.

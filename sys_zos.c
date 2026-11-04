@@ -10,7 +10,9 @@
  *    fork()+exec().  _BPX_SHAREAS and STEPLIB are honored by spawn from
  *    the environment we pass, so `export _BPX_SHAREAS=YES` gives local
  *    (same address space) spawns with no shell code involved.
- *  - _TAG_REDIR_IN/OUT/ERR implement the z/OS sh redirection tagging
+ *  - File and pipe tagging follow the build's charset: ASCII builds use
+ *    the zopen (zoslib) convention (ISO8859-1 pipes, _ENCODE_FILE_NEW
+ *    for new files); EBCDIC builds use the z/OS sh _TAG_REDIR_IN/OUT/ERR
  *    rules (z/OS UNIX Command Reference, sh, "Shell variables for
  *    automatic conversion").
  *  - Redirection to MVS data sets ("//'HLQ.DS'", "//DD:NAME") goes
@@ -109,40 +111,98 @@ pid_t sys_spawn(const char *path, char **argv, char **envp,
 
 /* ---- file tagging ---- */
 
+/*
+ * ASCII-mode builds (-qascii, -fzos-le-char-mode=ascii) compile 'A' as
+ * 0x41.  They follow the zopen (zoslib) convention: pipes are tagged
+ * ISO8859-1 and new files take the tag named by _ENCODE_FILE_NEW.
+ * EBCDIC builds follow z/OS /bin/sh: pipes stay untagged and new files
+ * are tagged only as _TAG_REDIR_OUT/_TAG_REDIR_ERR ask.
+ */
+#define ASCII_BUILD ('A' == 0x41)
+
+#define CCSID_ISO8859_1 819
+#define CCSID_IBM_1047 1047
+#define CCSID_BINARY 65535
+
+static void set_tag(int fd, unsigned short ccsid, int txt, int deferred) {
+    struct file_tag tag;
+
+    memset(&tag, 0, sizeof(tag));
+    tag.ft_ccsid = ccsid;
+    tag.ft_txtflag = txt;
+    tag.ft_deferred = deferred;
+    fcntl(fd, F_SETTAG, &tag);
+}
+
+/*
+ * pipe() with both ends close-on-exec.  In ASCII builds the pipe is
+ * tagged ISO8859-1 text, so an EBCDIC writer's output is converted to
+ * ASCII for zash (measured with tools/cvtprobe.c).
+ */
+int sys_pipe(int pfd[2]) {
+    if (pipe(pfd) < 0)
+        return -1;
+    fcntl(pfd[0], F_SETFD, FD_CLOEXEC);
+    fcntl(pfd[1], F_SETFD, FD_CLOEXEC);
+    if (ASCII_BUILD)
+        set_tag(pfd[1], CCSID_ISO8859_1, 1, 0);
+    return 0;
+}
+
 static int tagvar(const char *name) {
     const char *v = var_get(name);
 
     if (v == NULL)
         return 0;
-    if (strcmp(v, "TXT") == 0)
+    if (strcmp(v, "TXT") == 0 || strcmp(v, "txt") == 0)
         return 'T';
-    if (strcmp(v, "BIN") == 0)
+    if (strcmp(v, "BIN") == 0 || strcmp(v, "bin") == 0)
         return 'B';
     return 0;
 }
 
 /*
- * _TAG_REDIR_OUT/ERR: tag the target, if not already tagged, as
- * TXTFLAG=ON|OFF with CCSID = program CCSID at first write.  That is a
- * deferred tag: ft_ccsid 0 with ft_deferred set.  VERIFY field names.
+ * zoslib's _ENCODE_FILE_NEW: ISO8859-1 (the default), IBM-1047 or
+ * BINARY.  Anything else means the default.
+ */
+static void encode_file_new(int fd) {
+    const char *v = var_get("_ENCODE_FILE_NEW");
+
+    if (v != NULL && strcmp(v, "IBM-1047") == 0)
+        set_tag(fd, CCSID_IBM_1047, 1, 0);
+    else if (v != NULL && strcmp(v, "BINARY") == 0)
+        set_tag(fd, CCSID_BINARY, 0, 0);
+    else
+        set_tag(fd, CCSID_ISO8859_1, 1, 0);
+}
+
+/*
+ * Tag a file opened for writing if it is an empty, untagged regular
+ * file, i.e. one this redirection created or truncated.
+ *
+ * EBCDIC builds: _TAG_REDIR_OUT/ERR give TXTFLAG=ON|OFF with the CCSID
+ * of the program that writes first, a deferred tag (ft_ccsid 0 with
+ * ft_deferred set).  ASCII builds: _ENCODE_FILE_NEW, for every fd.
  */
 void sys_tag_new_file(int fd, int which) {
-    const char *var = which == 1   ? "_TAG_REDIR_OUT"
-                      : which == 2 ? "_TAG_REDIR_ERR"
-                                   : NULL;
     struct stat st;
-    struct file_tag tag;
-    int mode;
+    int mode = 0;
 
-    if (var == NULL || (mode = tagvar(var)) == 0)
+    if (!ASCII_BUILD) {
+        const char *var = which == 1   ? "_TAG_REDIR_OUT"
+                          : which == 2 ? "_TAG_REDIR_ERR"
+                                       : NULL;
+
+        if (var == NULL || (mode = tagvar(var)) == 0)
+            return;
+    }
+    if (fstat(fd, &st) < 0 || !S_ISREG(st.st_mode) || st.st_tag.ft_ccsid != 0 ||
+        st.st_size != 0)
         return;
-    if (fstat(fd, &st) < 0 || !S_ISREG(st.st_mode) || st.st_tag.ft_ccsid != 0)
-        return; /* only untagged regular files */
-    memset(&tag, 0, sizeof(tag));
-    tag.ft_ccsid = 0;
-    tag.ft_txtflag = mode == 'T';
-    tag.ft_deferred = 1;
-    fcntl(fd, F_SETTAG, &tag);
+    if (ASCII_BUILD)
+        encode_file_new(fd);
+    else
+        set_tag(fd, 0, mode == 'T', 1);
 }
 
 /*

@@ -222,10 +222,8 @@ static int heredoc_fd(struct redir *r) {
     if (!r->hd_quoted)
         body = expand_heredoc(body);
     len = strlen(body);
-    if (pipe(pfd) < 0)
+    if (sys_pipe(pfd) < 0)
         return -1;
-    cloexec(pfd[0]);
-    cloexec(pfd[1]);
     if (len <= PIPE_BUF) {
         if (len && write(pfd[1], body, len) < 0) {
             close(pfd[0]);

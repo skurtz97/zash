@@ -275,6 +275,7 @@ int job_count(void);
 void sys_init(void);
 pid_t sys_spawn(const char *path, char **argv, char **envp,
                 const struct fdplan *fp);
+int sys_pipe(int pfd[2]);
 int sys_open_redir(const char *name, int oflag, int mode, int which);
 void sys_tag_new_file(int fd, int which);
 int sys_input_seekable(int fd);

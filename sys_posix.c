@@ -134,6 +134,15 @@ pid_t sys_spawn(const char *path, char **argv, char **envp,
     return do_spawn(self_path, nv, envp, fp);
 }
 
+/* pipe() with both ends close-on-exec (the fd plan passes them on). */
+int sys_pipe(int pfd[2]) {
+    if (pipe(pfd) < 0)
+        return -1;
+    fcntl(pfd[0], F_SETFD, FD_CLOEXEC);
+    fcntl(pfd[1], F_SETFD, FD_CLOEXEC);
+    return 0;
+}
+
 int sys_open_redir(const char *name, int oflag, int mode, int which) {
     (void)which;
     return open(name, oflag, mode);
