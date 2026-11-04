@@ -144,6 +144,7 @@ static char *slurp(const char *path, size_t *len) {
     *len = 0;
     if (fd < 0)
         return NULL;
+    sys_input_text(fd);
     while ((n = read(fd, tmp, sizeof(tmp))) > 0 || (n < 0 && errno == EINTR))
         if (n > 0)
             sb_putn(&b, tmp, (size_t)n);
@@ -183,6 +184,7 @@ static int write_atomic(const char *path, const char *data, size_t len) {
         return -1;
     if ((fd = open(tmp, O_WRONLY | O_CREAT | O_TRUNC, 0600)) < 0)
         return -1;
+    sys_tag_new_file(fd, -1);
     while (len > 0) {
         if ((w = write(fd, data, len)) < 0) {
             if (errno == EINTR)
@@ -253,6 +255,7 @@ static int append_new(const char *path) {
         return 0;
     if ((fd = open(path, O_WRONLY | O_APPEND | O_CREAT, 0600)) < 0)
         return -1;
+    sys_tag_new_file(fd, -1);
     for (i = nent - unsaved; i < nent; i++) {
         sb_puts(&b, ent[i]);
         sb_putc(&b, '\n');
@@ -448,6 +451,7 @@ static int fc_edit(const char *editor, int first, int last, int reverse) {
             close(fd);
         return 1;
     }
+    sys_tag_new_file(fd, -1);
     for (i = reverse ? last : first; reverse ? i >= first : i <= last;
          reverse ? i-- : i++)
         fprintf(f, "%s\n", ent[i]);

@@ -305,12 +305,31 @@ int sys_open_redir(const char *name, int oflag, int mode, int which) {
     return fd;
 }
 
+/* Single-byte code pages: converted and file offsets agree. */
+static int sbcs(int ccsid) {
+    switch (ccsid) {
+    case 37:
+    case 273:
+    case 277:
+    case 278:
+    case 280:
+    case 284:
+    case 285:
+    case 297:
+    case 500:
+    case 819:
+    case 871:
+    case 1047:
+    case 1252: return 1;
+    default:   return ccsid >= 1140 && ccsid <= 1149;
+    }
+}
+
 /*
- * As on POSIX, but also refuse when auto-conversion is active on the
- * fd: lseek offsets count file bytes, and with a multibyte conversion
- * (e.g. a UTF-8 tagged file read by an EBCDIC program) the converted
- * byte count differs, so seeking back would land mid-line.
- * VERIFY: QUERYCVT usage and the "conversion off" result value.
+ * As on POSIX, but with auto-conversion active only when both sides
+ * are single-byte: lseek offsets count file bytes, and with a multibyte
+ * conversion (e.g. a UTF-8 tagged file read by an EBCDIC program) the
+ * converted byte count differs, so seeking back would land mid-line.
  */
 int sys_input_seekable(int fd) {
     struct stat st;
@@ -321,6 +340,50 @@ int sys_input_seekable(int fd) {
     memset(&cv, 0, sizeof(cv));
     cv.cvtcmd = QUERYCVT;
     if (fcntl(fd, F_CONTROL_CVT, &cv) == 0 && cv.cvtcmd != SETCVTOFF)
-        return 0;
+        return sbcs(cv.pccsid) && sbcs(cv.fccsid);
     return 1;
+}
+
+/*
+ * zoslib's UNTAGGED_READ_MODE=AUTO for files zash reads as shell input
+ * (scripts, . files, HISTFILE, fc's edited file): an ASCII build guesses
+ * the charset of an untagged file and, if it looks like EBCDIC, turns on
+ * IBM-1047 conversion.  Newlines decide most files (0x0A vs 0x15);
+ * otherwise printable ASCII is counted against EBCDIC letters, digits
+ * and spaces.  Redirections are left alone: children share their
+ * conversion state.
+ */
+void sys_input_text(int fd) {
+    struct stat st;
+    struct f_cnvrt cv;
+    unsigned char buf[4096];
+    long a = 0, e = 0;
+    ssize_t n, i;
+
+    if (!ASCII_BUILD || fstat(fd, &st) != 0 || !S_ISREG(st.st_mode) ||
+        st.st_tag.ft_ccsid != 0)
+        return;
+    if ((n = pread(fd, buf, sizeof(buf), 0)) <= 0)
+        return;
+    for (i = 0; i < n; i++) {
+        int c = buf[i];
+
+        if (c == 0x0A)
+            a += 8;
+        else if (c == 0x15)
+            e += 8;
+        else if (c >= 0x81 && c <= 0xF9)
+            e++; /* EBCDIC letters and digits; never ASCII text */
+        else if (c == 0x40)
+            e++;
+        else if ((c >= 0x20 && c < 0x7F) || c == '\t')
+            a++;
+    }
+    if (e <= a)
+        return;
+    memset(&cv, 0, sizeof(cv));
+    cv.cvtcmd = SETCVTON;
+    cv.pccsid = CCSID_ISO8859_1;
+    cv.fccsid = CCSID_IBM_1047;
+    fcntl(fd, F_CONTROL_CVT, &cv);
 }

@@ -327,6 +327,7 @@ int main(int argc, char **argv) {
             sh_warn("%s: %s", script, strerror(errno));
             return errno == ENOENT ? 127 : 126;
         }
+        sys_input_text(fd);
         fd = move_high(fd);
     }
     set_positional(argv + i, argc - i);

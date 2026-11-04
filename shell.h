@@ -279,6 +279,7 @@ int sys_pipe(int pfd[2]);
 int sys_open_redir(const char *name, int oflag, int mode, int which);
 void sys_tag_new_file(int fd, int which);
 int sys_input_seekable(int fd);
+void sys_input_text(int fd);
 
 /* z/OS builtins (zos_builtins.c) */
 int b_tso(int argc, char **argv);

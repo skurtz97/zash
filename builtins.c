@@ -181,6 +181,7 @@ static int b_dot(int argc, char **argv) {
         sh_error(".: %s: %s", argv[1], strerror(errno));
         return 1;
     }
+    sys_input_text(fd);
     if (fd < 10) {
         int nfd = fcntl(fd, F_DUPFD, 10);
 

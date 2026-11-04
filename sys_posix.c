@@ -155,6 +155,10 @@ void sys_tag_new_file(int fd, int which) {
 
 /* Safe to over-read and lseek back: regular files only (a tty can
  * report a successful lseek on Linux, so don't test with lseek). */
+void sys_input_text(int fd) {
+    (void)fd;
+}
+
 int sys_input_seekable(int fd) {
     struct stat st;
 
