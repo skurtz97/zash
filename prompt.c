@@ -153,7 +153,7 @@ decode(const char *ps, struct sbuf *b)
 			sb_puts(b, num);
 			break;
 		case '!':
-			snprintf(num, sizeof(num), "%d", hist_next_number());
+			snprintf(num, sizeof(num), "%d", zhist_next_number());
 			sb_puts(b, num);
 			break;
 		case '#':

@@ -1,11 +1,14 @@
 # zash
 
 An Almquist-family POSIX shell for z/OS UNIX System Services that also
-builds on Linux and BSD. It has libedit line editing, bash-compatible
+builds on Linux and BSD. It has line editing through a bundled port of
+NetBSD libedit, bash-compatible
 prompts and history, and z/OS support for `spawn()`, file tagging, MVS
 data sets and TSO.
 
-FreeBSD sh, oksh and BusyBox ash were used as references only. The code is
+The line-editing library in `libedit/` is NetBSD code, unmodified apart
+from the port layer; see [libedit/README.md](libedit/README.md).
+FreeBSD sh, oksh and BusyBox ash were used as references only. The shell is
 new, and nothing was copied from BusyBox (GPLv2).
 
 ## Status
@@ -27,8 +30,8 @@ Missing: job control (`fg`, `bg`, `jobs`, `^Z`), `trap`, `kill`, `getopts`,
 
 ## Building
 
-Any POSIX `make` works (tested with GNU make and bmake). libedit is
-optional. There are three toolchains:
+Any POSIX `make` works (tested with GNU make and bmake). There are three
+toolchains:
 
 | Command | Platform | Compiler |
 |---|---|---|
@@ -39,14 +42,22 @@ optional. There are three toolchains:
 ```sh
 make                                     # Linux/BSD, clang
 make CC=gcc                              # if clang isn't installed
-make EDIT_CPPFLAGS= EDIT_LIBS=           # no line editing (any target)
+make EDIT_CPPFLAGS= EDIT_LIBS= EDIT_DEP= # no line editing (any target)
 make check                               # run the tests
 make install PREFIX=$HOME/.local         # installs bin/zash
 make dist                                # zash.tar for transfer to z/OS
 ```
 
-On Fedora, the libedit headers are in `libedit-devel`; on Debian and
-Ubuntu, `libedit-dev`.
+Line editing uses the bundled NetBSD libedit in `libedit/`, which is built
+automatically and linked statically. Its one outside dependency is the
+termcap functions from curses: ncurses on Linux (`ncurses-devel` on
+Fedora, `libncurses-dev` on Debian/Ubuntu), and system curses
+(`-lcurses`) on z/OS. Override the library with `TERMLIB=` on Linux or
+`TERMLIB_ZOS=` on z/OS. To use the system libedit instead:
+
+```sh
+make EDIT_CPPFLAGS=-DWITH_LIBEDIT EDIT_LIBS=-ledit EDIT_DEP=
+```
 
 `check` and `install` use the `zash` already built and never rebuild it.
 That way `make zos` followed by `make check` tests the z/OS binary.
@@ -90,14 +101,22 @@ text. That works for both compilers, for `/bin/sh` and, through automatic
 conversion, for an ASCII-mode zash. All shipped files are plain ASCII, so
 the conversion is lossless.
 
-zopen has no libedit port. Point the build at your own libedit, or build
-without line editing:
+The bundled libedit is ASCII-only: its key tables are indexed by ASCII
+code, and `libedit/port/port.h` stops an EBCDIC build with an error. An
+EBCDIC zash must therefore be built without line editing:
 
 ```sh
-make zos EDIT_CPPFLAGS='-DWITH_LIBEDIT -I/path/include' \
-    EDIT_LIBS='-L/path/lib -ledit'
-make zos EDIT_CPPFLAGS= EDIT_LIBS=
+make zos OXL_ASCII= EDIT_CPPFLAGS= EDIT_LIBS= EDIT_DEP=
 ```
+
+To use zopen's ncurses instead of system curses:
+
+```sh
+make zos TERMLIB_ZOS='-L$ZOPEN_ROOT/lib -lncurses'
+```
+
+libedit hasn't been built on z/OS yet; [libedit/README.md](libedit/README.md)
+lists what to check.
 
 ## Usage
 
@@ -275,6 +294,7 @@ output, because dash handles a script read from stdin incorrectly.
 | `sys_posix.c` `sys_zos.c` | platform layer: spawn, opening redirections, tagging |
 | `zos_builtins.c` | `tso`, `chtag`, `extattr` |
 | `mem.c` | arena allocator and growable buffers |
+| `libedit/` | bundled NetBSD libedit: upstream files in `netbsd/`, port layer in `port/` |
 
 [DESIGN.md](DESIGN.md) explains the design decisions in more detail.
 
@@ -293,5 +313,10 @@ output, because dash handles a script read from stdin incorrectly.
 
 ## License
 
-BSD 3-Clause; see [LICENSE](LICENSE). No code from other shells is
-included, so no third-party notices are needed.
+zash is BSD 3-Clause; see [LICENSE](LICENSE).
+
+`libedit/netbsd/` is third-party code under its original licenses:
+3-clause BSD (University of California), 2-clause BSD (The NetBSD
+Foundation) and ISC. These are reproduced in
+[libedit/LICENSE](libedit/LICENSE). Binary distributions of zash built
+with the bundled libedit must include those notices.

@@ -151,7 +151,7 @@ refill_interactive(struct src *s)
 	memcpy(s->buf, line, (size_t)len);
 	s->p = s->buf;
 	s->end = s->buf + len;
-	hist_add(line);
+	zhist_add(line);
 	return 0;
 }
 

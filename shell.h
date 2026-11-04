@@ -153,10 +153,10 @@ void le_set_editor(const char *mode);
 void le_history_clear(void);
 
 /* history.c */
-void hist_init(void);
-void hist_add(const char *line);
-void hist_save(void);
-int  hist_next_number(void);
+void zhist_init(void);
+void zhist_add(const char *line);
+void zhist_save(void);
+int  zhist_next_number(void);
 int  b_fc(int argc, char **argv);
 int  b_history(int argc, char **argv);
 

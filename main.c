@@ -21,7 +21,7 @@ _Noreturn void
 sh_exit(int st)
 {
 	if (sh.interactive && !sh.in_subshell)
-		hist_save();
+		zhist_save();
 	fflush(NULL);
 	le_end();
 	exit(st);
@@ -382,7 +382,7 @@ main(int argc, char **argv)
 		if (env)
 			source_if(expand_str(env, EXP_TILDE));
 		le_init();
-		hist_init();
+		zhist_init();
 	}
 	if (cmd)
 		sh_exit(evaltree_last(parse_string_all(cmd)));

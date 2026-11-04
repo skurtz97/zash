@@ -9,13 +9,17 @@ them on Linux. **The z/OS layer has not been compiled on z/OS yet.**
 
 ## Build
 
-POSIX `make`, flat tree, no generated sources. The Makefile has no
-conditionals. The three toolchains are separate targets: `make` (clang on
+POSIX `make`, flat tree, no generated sources apart from libedit's
+headers (below). The Makefile has no conditionals. The three toolchains are separate targets: `make` (clang on
 Linux/BSD), `make zos` (Open XL `ibm-clang -m64`) and `make xlc` (XL C
 `xlc -q64 -qxplink -qlanglvl=extc1x`). The z/OS targets call `$(MAKE)`
 again with their own `CC`, flags and `SYSOBJ=sys_zos.o`. ASCII mode is on
 by default and controlled by the `OXL_ASCII` and `XLC_ASCII` macros.
-libedit is controlled by the `EDIT_CPPFLAGS` and `EDIT_LIBS` macros.
+Line editing is controlled by `EDIT_CPPFLAGS`, `EDIT_LIBS` and
+`EDIT_DEP`. By default they select the bundled libedit, which `libedit/`
+builds with the parent's `CC` and `CFLAGS`. Clearing all three disables
+line editing; `-DWITH_LIBEDIT`, `-ledit` and an empty `EDIT_DEP` select
+the system library.
 
 `.flags` records the toolchain. When it changes, the old objects are
 deleted outright instead of relying on timestamps. bmake compares whole
@@ -24,8 +28,9 @@ otherwise look current and be linked with output from the wrong compiler.
 `check` and `install` don't depend on `zash`, so they can't rebuild it
 with the Linux toolchain right after a z/OS build.
 
-zopen has no libedit port, so libedit must be built first or the shell
-built without it.
+zash's history API is `zhist_*`. A static libedit exposes its internal
+`hist_*` functions to the linker, and an earlier `hist_init` in zash
+collided with one.
 
 ## Source map
 
@@ -33,6 +38,7 @@ built without it.
 |---|---|
 | `shell.h` | All shared declarations |
 | `mem.c` | Bump arena (+1 spare block), heap helpers, `sbuf` |
+| `libedit/` | Bundled NetBSD libedit; see below and `libedit/README.md` |
 | `input.c` | Input source stack: strings, fds (4 KB reads), interactive |
 | `lineedit.c` | libedit setup: emacs/vi, history, `~/.editrc`, prompt width escapes |
 | `complete.c` | TAB completion: commands, files, `$VAR`, quote-aware |
@@ -96,10 +102,10 @@ oksh; oksh was not available in the test environment.
 | `${p##*/}` etc., 100k | 0.31 s | 0.36 s | 0.96 s | 0.44 s |
 | `case`, 300k | 0.23 s | 0.24 s | 0.78 s | 0.26 s |
 | `while read`, 100k lines | 0.19 s | 0.69 s | 0.57 s | 0.18 s |
-| 3000 × `/bin/true` | 2.89 s | 2.99 s | 3.67 s | 3.19 s |
-| 2000 × `$(/bin/echo)` | 1.98 s | 2.26 s | 2.98 s | 2.38 s |
-| 3-stage pipeline, 1000× | 2.19 s | 2.22 s | 2.50 s | 2.56 s |
-| 2000 × `sh -c :` | 2.69 s | 2.16 s | 3.86 s | 3.29 s |
+| 3000 x `/bin/true` | 2.89 s | 2.99 s | 3.67 s | 3.19 s |
+| 2000 x `$(/bin/echo)` | 1.98 s | 2.26 s | 2.98 s | 2.38 s |
+| 3-stage pipeline, 1000x | 2.19 s | 2.22 s | 2.50 s | 2.56 s |
+| 2000 x `sh -c :` | 2.69 s | 2.16 s | 3.86 s | 3.29 s |
 
 Interactive start and exit, per start: 2.9 ms (bash 3.4 ms) with no
 history; 5.1 ms (bash 5.6 ms) with a 10,000-line `HISTFILE`.
@@ -148,6 +154,38 @@ be checked on a real system.
 - **Builtins:** `chtag -p` is native; other `chtag` forms and `extattr` defer
   to `/bin/chtag` and `/bin/extattr`; `tso` defers to `tsocmd`. Off z/OS
   all three exit 2.
+
+## Bundled libedit
+
+z/OS has no libedit package, so zash carries NetBSD's `lib/libedit`, plus
+the libc helpers it needs (`vis.c`, `unvis.c`, `strlcpy.c`, `strlcat.c`).
+They come from NetBSD `src` commit `91af1a58`. FreeBSD's
+`contrib/libedit` tracks the same code.
+
+- **Upstream stays byte-identical.** `make -C libedit verify` checks the
+  files against `netbsd.sha256` and rejects added files.
+- **Porting lives in `libedit/port/`.**
+  - `config.h` replaces NetBSD's and selects features per platform, with
+    no configure step.
+  - `port.h` supplies the NetBSD `<sys/cdefs.h>` macros. It reaches the
+    libc files through the `namespace.h` and `nbtool_config.h` hooks they
+    already include.
+  - z/OS-only stand-ins for `<sys/cdefs.h>` and `<sys/param.h>` sit on a
+    separate include path, so they never shadow real headers elsewhere.
+- **Helpers are renamed with a `libedit_` prefix** (`strlcpy`, all of
+  `vis`, `issetugid`, and on z/OS `getline` and `wcsdup`). Statically
+  linked, a name shared with libc would be a link error or a silent
+  override.
+- **Only `histedit.h` is exposed** to zash (copied to `libedit/include/`).
+  Upstream also has headers named `search.h` and `tty.h`, which would
+  shadow system headers.
+- **ASCII builds only.** `map.c`'s key tables are indexed by ASCII code;
+  `port.h` stops an EBCDIC build with an error.
+- **Omitted:** `readline.c`, the GNU-readline compatibility layer. zash
+  doesn't use it, and it needs the non-POSIX `getpwent_r`.
+- **Warnings:** clang `-Wall -Wextra -pedantic` is clean. That needed one
+  trick: `__RCSID` expands to a forward `struct` declaration, which
+  legally absorbs the semicolon upstream writes after it.
 
 ## Interactive features
 

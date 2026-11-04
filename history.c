@@ -92,13 +92,13 @@ resync(void)
 }
 
 int
-hist_next_number(void)
+zhist_next_number(void)
 {
 	return base + nent;
 }
 
 void
-hist_add(const char *line)
+zhist_add(const char *line)
 {
 	const char *ctl = var_get("HISTCONTROL");
 	size_t n = strlen(line);
@@ -308,7 +308,7 @@ append_new(const char *path)
 }
 
 void
-hist_init(void)
+zhist_init(void)
 {
 	const char *home = var_get("HOME"), *f;
 
@@ -326,7 +326,7 @@ hist_init(void)
 
 /* At exit of the interactive top-level shell. */
 void
-hist_save(void)
+zhist_save(void)
 {
 	const char *f;
 
