@@ -220,10 +220,11 @@ status 2.
   without `#!` are run by zash itself, unless `_BPX_SPAWN_SCRIPT=YES` lets
   spawn handle them first.
 - **Tagging.** Each build follows the conventions of the tools around it.
-  The ASCII build (the default) follows zopen: pipes are tagged ISO8859-1,
-  so output from EBCDIC programs is converted for zash, and new files made
-  by a redirection take the tag named by `_ENCODE_FILE_NEW` (`ISO8859-1`,
-  the default, `IBM-1047` or `BINARY`). The EBCDIC build follows `sh` in
+  The ASCII build (the default) follows zopen for files: new files made by
+  zash take the tag named by `_ENCODE_FILE_NEW` (`ISO8859-1`, the default,
+  `IBM-1047` or `BINARY`), and untagged input files are checked for EBCDIC.
+  Pipes are tagged IBM-1047 rather than zopen's ISO8859-1, so ASCII and
+  EBCDIC programs can be mixed freely in a pipeline. The EBCDIC build follows `sh` in
   the z/OS UNIX Command Reference: `_TAG_REDIR_OUT` and `_TAG_REDIR_ERR`
   (`TXT` or `BIN`) give untagged output files a deferred tag, set at the
   first write. In both builds `_TAG_REDIR_IN` turns conversion of input

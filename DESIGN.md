@@ -143,9 +143,10 @@ be checked on a real system.
   code. ENOEXEC (script without `#!`) reruns the script with zash itself
   unless `_BPX_SPAWN_SCRIPT=YES` handles it first. VERIFY: ASCII-mode entry
   point and conversion of argv/envp.
-- **ASCII builds (zopen convention):** `sys_pipe()` tags every pipe
-  ISO8859-1 text, and an empty untagged regular redirection target gets the
-  `_ENCODE_FILE_NEW` tag (ISO8859-1 by default). `tools/cvtprobe.c`
+- **ASCII builds:** `sys_pipe()` tags every pipe IBM-1047 text (zoslib uses
+  ISO8859-1, which leaves EBCDIC readers seeing ASCII), and files zash
+  creates get the zopen `_ENCODE_FILE_NEW` tag (ISO8859-1 by default).
+  `sys_input_text()` sniffs untagged input files for EBCDIC. `tools/cvtprobe.c`
   measures the behaviour this relies on. EBCDIC builds:
 - **`_TAG_REDIR_OUT/ERR=TXT|BIN`:** untagged regular targets get a deferred
   `F_SETTAG` (CCSID 0, `ft_deferred`), matching the documented "program

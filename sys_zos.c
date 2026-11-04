@@ -113,8 +113,9 @@ pid_t sys_spawn(const char *path, char **argv, char **envp,
 
 /*
  * ASCII-mode builds (-qascii, -fzos-le-char-mode=ascii) compile 'A' as
- * 0x41.  They follow the zopen (zoslib) convention: pipes are tagged
- * ISO8859-1 and new files take the tag named by _ENCODE_FILE_NEW.
+ * 0x41.  New files follow the zopen (zoslib) convention and take the
+ * tag named by _ENCODE_FILE_NEW.  Pipes are tagged IBM-1047, unlike
+ * zoslib's ISO8859-1 (see sys_pipe).
  * EBCDIC builds follow z/OS /bin/sh: pipes stay untagged and new files
  * are tagged only as _TAG_REDIR_OUT/_TAG_REDIR_ERR ask.
  */
@@ -136,8 +137,12 @@ static void set_tag(int fd, unsigned short ccsid, int txt, int deferred) {
 
 /*
  * pipe() with both ends close-on-exec.  In ASCII builds the pipe is
- * tagged ISO8859-1 text, so an EBCDIC writer's output is converted to
- * ASCII for zash (measured with tools/cvtprobe.c).
+ * tagged IBM-1047 text, so it always carries EBCDIC: zash's ASCII
+ * writes are converted on the way in and its reads on the way out,
+ * while EBCDIC programs at either end pass bytes unconverted.  With
+ * zoslib's ISO8859-1 tag, EBCDIC writers (sh) are converted to ASCII
+ * but EBCDIC readers (od, sed) are not, so /bin pipelines broke.
+ * Measured with tools/cvtprobe.c.
  */
 int sys_pipe(int pfd[2]) {
     if (pipe(pfd) < 0)
@@ -145,7 +150,7 @@ int sys_pipe(int pfd[2]) {
     fcntl(pfd[0], F_SETFD, FD_CLOEXEC);
     fcntl(pfd[1], F_SETFD, FD_CLOEXEC);
     if (ASCII_BUILD)
-        set_tag(pfd[1], CCSID_ISO8859_1, 1, 0);
+        set_tag(pfd[1], CCSID_IBM_1047, 1, 0);
     return 0;
 }
 
