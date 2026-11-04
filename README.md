@@ -27,34 +27,77 @@ Missing: job control (`fg`, `bg`, `jobs`, `^Z`), `trap`, `kill`, `getopts`,
 
 ## Building
 
-You need a C11 compiler and any POSIX `make`. libedit is optional.
+Any POSIX `make` works (tested with GNU make and bmake). libedit is
+optional. There are three toolchains:
+
+| Command | Platform | Compiler |
+|---|---|---|
+| `make` (or `make linux`) | Linux, BSD | `clang` |
+| `make zos` | z/OS | IBM Open XL C/C++ (`ibm-clang -m64`) |
+| `make xlc` | z/OS | IBM z/OS XL C (`xlc -q64`) |
 
 ```sh
-make                                     # Linux/BSD with libedit
-make CPPFLAGS=-D_XOPEN_SOURCE=700 LIBS=  # no line editing
+make                                     # Linux/BSD, clang
+make CC=gcc                              # if clang isn't installed
+make EDIT_CPPFLAGS= EDIT_LIBS=           # no line editing (any target)
 make check                               # run the tests
 make install PREFIX=$HOME/.local         # installs bin/zash
+make dist                                # zash.tar for transfer to z/OS
 ```
 
-The libedit headers come from `libedit-devel` on Fedora and `libedit-dev`
-on Debian and Ubuntu.
+On Fedora, the libedit headers are in `libedit-devel`; on Debian and
+Ubuntu, `libedit-dev`.
+
+`check` and `install` use the `zash` already built and never rebuild it.
+That way `make zos` followed by `make check` tests the z/OS binary.
+
+Changing the compiler or flags deletes the old objects and rebuilds
+everything, so the same tree can switch between `make zos` and `make xlc`.
 
 ### z/OS
 
-Use IBM Open XL C/C++ with `ibm-clang64`. ASCII mode is rejected under
-`ibm-clang`'s default 31-bit non-XPLINK mode (`-m32n`).
+Both z/OS builds default to ASCII mode, the zopen convention. Clear the
+ASCII macro for an EBCDIC build:
 
 ```sh
-# ASCII mode (zopen convention)
-make CC=ibm-clang64 SYSOBJ=sys_zos.o \
-  CFLAGS='-std=c11 -O2 -Wall -Wextra -fzos-le-char-mode=ascii' \
-  CPPFLAGS='-D_XOPEN_SOURCE=600 -D_OPEN_SYS_FILE_EXT=1 -DWITH_LIBEDIT'
-
-# EBCDIC mode: the same command without -fzos-le-char-mode=ascii
+make zos                     # Open XL, ASCII
+make zos OXL_ASCII=          # Open XL, EBCDIC
+make xlc                     # XL C, ASCII
+make xlc XLC_ASCII=          # XL C, EBCDIC
 ```
 
-zopen has no libedit port. Build libedit first, or build without it by
-dropping `-DWITH_LIBEDIT` and adding `LIBS=`.
+- **Open XL** builds with `-m64`. `ibm-clang` defaults to 31-bit
+  non-XPLINK (`-m32n`), which rejects `-fzos-le-char-mode=ascii`.
+- **XL C** builds with `-q64 -qxplink -qlanglvl=extc1x`; `extc1x` is xlc's
+  C11 level. xlc has no `-Wall` or `-Wextra`. The ASCII flags
+  (`-qascii -D_ENHANCED_ASCII_EXT=0xFFFFFFFF`) haven't been checked on a
+  real system yet.
+- **Overrides:** use `OXL_CC`, `OXL_CFLAGS`, `OXL_LDFLAGS`, `XLC_CC`,
+  `XLC_CFLAGS`, `XLC_LDFLAGS` or `ZOS_CPPFLAGS`. Plain `CFLAGS` only
+  applies to the Linux build.
+
+To copy the source to z/OS, run `make dist` on Linux, which writes
+`zash.tar` (ustar format). Transfer it in binary mode: `sftp` does that by
+default; with FTP, use `binary`. On z/OS:
+
+```sh
+pax -rf zash.tar -ofrom=ISO8859-1,to=IBM-1047 -o setfiletag
+cd zash && make zos && make check
+```
+
+The `pax` options convert the files to EBCDIC and tag them as IBM-1047
+text. That works for both compilers, for `/bin/sh` and, through automatic
+conversion, for an ASCII-mode zash. All shipped files are plain ASCII, so
+the conversion is lossless.
+
+zopen has no libedit port. Point the build at your own libedit, or build
+without line editing:
+
+```sh
+make zos EDIT_CPPFLAGS='-DWITH_LIBEDIT -I/path/include' \
+    EDIT_LIBS='-L/path/lib -ledit'
+make zos EDIT_CPPFLAGS= EDIT_LIBS=
+```
 
 ## Usage
 
@@ -92,15 +135,15 @@ TAB fills in the common prefix and then lists the rest in columns.
 
 **Prompts.** `PS1` and `PS2` use bash's escapes:
 
-| Escape                             | Meaning                                    |
-| ---------------------------------- | ------------------------------------------ |
-| `\u` `\h` `\H`                     | user, short host, full host                |
-| `\w` `\W`                          | working directory (with `~`), its basename |
-| `\$`                               | `#` for root, otherwise `$`                |
-| `\t` `\T` `\@` `\A` `\d` `\D{fmt}` | time and date                              |
-| `\j` `\!` `\#`                     | job count, history number, command number  |
-| `\e` `\nnn` `\n` `\\`              | escape, octal byte, newline, backslash     |
-| `\[ \]`                            | wrap non-printing text such as color codes |
+| Escape | Meaning |
+|---|---|
+| `\u` `\h` `\H` | user, short host, full host |
+| `\w` `\W` | working directory (with `~`), its basename |
+| `\$` | `#` for root, otherwise `$` |
+| `\t` `\T` `\@` `\A` `\d` `\D{fmt}` | time and date |
+| `\j` `\!` `\#` | job count, history number, command number |
+| `\e` `\nnn` `\n` `\\` | escape, octal byte, newline, backslash |
+| `\[ \]` | wrap non-printing text such as color codes |
 
 After the escapes, the prompt is expanded like a variable, so `$VAR` and
 `$(cmd)` work. An existing bash prompt should work unchanged:
@@ -123,13 +166,13 @@ a directory named `$(cmd)` is displayed, not run.
   0600, since history often contains secrets.
 - Closing the terminal (SIGHUP) saves before exiting.
 
-| Variable       | Default              | Meaning                                     |
-| -------------- | -------------------- | ------------------------------------------- |
-| `HISTFILE`     | `~/.zash_history`    | history file; empty disables saving         |
-| `HISTSIZE`     | 500                  | entries kept in memory                      |
-| `HISTFILESIZE` | `HISTSIZE`           | entries kept in the file                    |
-| `HISTCONTROL`  | unset                | `ignorespace`, `ignoredups` or `ignoreboth` |
-| `FCEDIT`       | `$EDITOR`, then `ed` | editor for `fc`                             |
+| Variable | Default | Meaning |
+|---|---|---|
+| `HISTFILE` | `~/.zash_history` | history file; empty disables saving |
+| `HISTSIZE` | 500 | entries kept in memory |
+| `HISTFILESIZE` | `HISTSIZE` | entries kept in the file |
+| `HISTCONTROL` | unset | `ignorespace`, `ignoredups` or `ignoreboth` |
+| `FCEDIT` | `$EDITOR`, then `ed` | editor for `fc` |
 
 `fc` works as POSIX describes: `-l`, `-n`, `-r`, `-s old=new` and
 `-e editor`. `history` takes `[n]`, `-c` (clear), `-a` (append to the
@@ -182,15 +225,15 @@ is rebuilt only after an exported variable changes.
 
 Linux x86-64, best of 3 runs (`bench/run.sh`):
 
-| Workload                         | zash   | dash   | bash   | ksh93  |
-| -------------------------------- | ------ | ------ | ------ | ------ |
+| Workload | zash | dash | bash | ksh93 |
+|---|---|---|---|---|
 | arithmetic loop, 200k iterations | 0.17 s | 0.25 s | 0.59 s | 0.20 s |
-| function calls, 100k             | 0.16 s | 0.20 s | 0.68 s | 0.25 s |
-| `${p##*/}` and similar, 100k     | 0.31 s | 0.36 s | 0.96 s | 0.44 s |
-| `while read`, 100k lines         | 0.19 s | 0.69 s | 0.57 s | 0.18 s |
-| 3000 × `/bin/true`               | 2.89 s | 2.99 s | 3.67 s | 3.19 s |
-| 2000 × `$(/bin/echo)`            | 1.98 s | 2.26 s | 2.98 s | 2.38 s |
-| 2000 × `sh -c :`                 | 2.69 s | 2.16 s | 3.86 s | 3.29 s |
+| function calls, 100k | 0.16 s | 0.20 s | 0.68 s | 0.25 s |
+| `${p##*/}` and similar, 100k | 0.31 s | 0.36 s | 0.96 s | 0.44 s |
+| `while read`, 100k lines | 0.19 s | 0.69 s | 0.57 s | 0.18 s |
+| 3000 x `/bin/true` | 2.89 s | 2.99 s | 3.67 s | 3.19 s |
+| 2000 x `$(/bin/echo)` | 1.98 s | 2.26 s | 2.98 s | 2.38 s |
+| 2000 x `sh -c :` | 2.69 s | 2.16 s | 3.86 s | 3.29 s |
 
 Startup is slower than dash, probably because libedit is linked even for
 non-interactive use; this hasn't been profiled. zash also lacks traps and
@@ -216,22 +259,22 @@ output, because dash handles a script read from stdin incorrectly.
 
 ## Source layout
 
-| File                                             | Role                                                            |
-| ------------------------------------------------ | --------------------------------------------------------------- |
-| `shell.h`                                        | shared declarations                                             |
-| `main.c`                                         | startup, options, errors, top-level loop                        |
-| `input.c`                                        | input sources; keeps stdin offsets correct for scripts on stdin |
-| `parse.c`                                        | lexer and recursive-descent parser, here-documents              |
-| `expand.c`                                       | expansion, field splitting, globbing, arithmetic                |
-| `eval.c`                                         | evaluation, pipelines, background jobs, `$(...)`                |
-| `exec.c`                                         | PATH hash, functions, redirections, fd plans                    |
-| `var.c`                                          | variables and the cached environment                            |
-| `jobs.c`                                         | background process table                                        |
-| `builtins.c`                                     | POSIX builtins                                                  |
-| `lineedit.c` `complete.c` `prompt.c` `history.c` | interactive features                                            |
-| `sys_posix.c` `sys_zos.c`                        | platform layer: spawn, opening redirections, tagging            |
-| `zos_builtins.c`                                 | `tso`, `chtag`, `extattr`                                       |
-| `mem.c`                                          | arena allocator and growable buffers                            |
+| File | Role |
+|---|---|
+| `shell.h` | shared declarations |
+| `main.c` | startup, options, errors, top-level loop |
+| `input.c` | input sources; keeps stdin offsets correct for scripts on stdin |
+| `parse.c` | lexer and recursive-descent parser, here-documents |
+| `expand.c` | expansion, field splitting, globbing, arithmetic |
+| `eval.c` | evaluation, pipelines, background jobs, `$(...)` |
+| `exec.c` | PATH hash, functions, redirections, fd plans |
+| `var.c` | variables and the cached environment |
+| `jobs.c` | background process table |
+| `builtins.c` | POSIX builtins |
+| `lineedit.c` `complete.c` `prompt.c` `history.c` | interactive features |
+| `sys_posix.c` `sys_zos.c` | platform layer: spawn, opening redirections, tagging |
+| `zos_builtins.c` | `tso`, `chtag`, `extattr` |
+| `mem.c` | arena allocator and growable buffers |
 
 [DESIGN.md](DESIGN.md) explains the design decisions in more detail.
 
@@ -250,4 +293,5 @@ output, because dash handles a script read from stdin incorrectly.
 
 ## License
 
-Not yet chosen.
+BSD 3-Clause; see [LICENSE](LICENSE). No code from other shells is
+included, so no third-party notices are needed.

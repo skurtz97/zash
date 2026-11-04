@@ -80,13 +80,14 @@ zash: $(OBJS) .flags
 
 $(OBJS): shell.h .flags
 
-# Records the toolchain; rewritten only when it changes, so a new
-# compiler or new flags make every object out of date.
+# Records the toolchain.  When it changes the old objects are deleted
+# outright rather than left to timestamps: makes with one-second mtime
+# resolution would otherwise keep objects from the previous compiler.
 .flags: FORCE
 	@echo '$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(LIBS) $(SYSOBJ)' \
 	    > .flags.new; \
 	if cmp -s .flags.new .flags; then rm -f .flags.new; \
-	else mv .flags.new .flags; fi
+	else rm -f *.o zash; mv .flags.new .flags; fi
 
 FORCE:
 
@@ -99,5 +100,17 @@ install:
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
 	cp zash $(DESTDIR)$(PREFIX)/bin/zash
 
+# Source tarball for z/OS (ustar, top directory zash/).  All files are
+# ASCII; on z/OS extract as tagged EBCDIC with:
+#   pax -rf zash.tar -ofrom=ISO8859-1,to=IBM-1047 -o setfiletag
+DIST = LICENSE README.md DESIGN.md Makefile *.c *.h tests bench
+
+dist:
+	rm -rf .dist zash.tar && mkdir -p .dist/zash && cp -R $(DIST) .dist/zash/
+	cd .dist && { tar --format=ustar -cf ../zash.tar zash 2>/dev/null || \
+	    tar -cf ../zash.tar zash; }
+	rm -rf .dist
+
 clean:
-	rm -f zash *.o .flags .flags.new
+	rm -f zash *.o .flags .flags.new zash.tar
+	rm -rf .dist
